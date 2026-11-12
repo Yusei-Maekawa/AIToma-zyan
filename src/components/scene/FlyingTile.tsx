@@ -10,6 +10,7 @@ import {
   HAND_Z,
   discardSlotPosition,
 } from '../../game/layout'
+import { easeInOutCubic, easeOutCubic } from '../../lib/easing'
 import { MahjongTile, useTileFx } from './MahjongTile'
 import type { TileTransformRegistry } from './tileRegistry'
 
@@ -18,8 +19,6 @@ const FLIGHT_DURATION = 0.62
 /** 放物線の頂点の高さ */
 const ARC_HEIGHT = 0.95
 
-const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
-const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3)
 const lerp = THREE.MathUtils.lerp
 
 interface FlyingTileProps {

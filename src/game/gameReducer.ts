@@ -5,31 +5,35 @@ import { CATEGORY_ORDER } from '../data/categories'
 /**
  * PoC用のゲーム状態管理（useReducer）。
  *
- * 状態遷移:
- *   idle ──SELECT──▶ selected ──DISCARD──▶ flying ──LAND──▶ idle
- *                       ▲   │
- *                       └───┘ SELECT（同じ牌で解除 / 別の牌で切替）
+ * 状態遷移（手牌の枚数）:
+ *   13枚 ──DRAW──▶ 14枚 ──DISCARD──▶ flying ──LAND──▶ 13枚
  *
- * flying 中は SELECT / DISCARD / REDEAL をすべて無視することで、
+ * 選択（SELECT / SELECT_NEIGHBOR / DESELECT）は13枚・14枚どちらでも可能（解説を見るため）。
+ * DISCARD はツモ牌があるとき（14枚）だけ、DRAW はツモ牌がなく牌山が残っているときだけ受け付ける。
+ * flying 中は LAND 以外をすべて無視することで、
  * アニメーション中の重複操作をロジック側で確実に防ぐ（UIのボタン無効化は補助）。
+ *
+ * StrictMode では reducer が2回呼ばれるため、乱数・時刻・外部カウンタは使わない（seed と dealId から決める）。
  */
 
 export const HAND_SIZE = 13
 /** 同じ用語の牌は最大4枚（通常の麻雀と同じ） */
 const COPIES_PER_TERM = 4
+/** 初期状態の牌山を毎回同じ並びにするための seed */
+const INITIAL_WALL_SEED = 20260101
 
 export type GameAction =
   | { type: 'SELECT'; uid: string }
   | { type: 'SELECT_NEIGHBOR'; direction: -1 | 1 }
   | { type: 'DESELECT' }
+  | { type: 'DRAW' }
   | { type: 'DISCARD' }
   | { type: 'LAND' }
-  | { type: 'REDEAL'; seed?: number }
+  | { type: 'REDEAL'; seed: number }
 
-let uidCounter = 0
-function nextUid(termId: string): string {
-  uidCounter += 1
-  return `${termId}#${uidCounter}`
+/** 手牌とツモ牌を表示順（ツモ牌が右端）に並べたもの */
+export function handWithDrawn(state: Pick<GameState, 'hand' | 'drawn'>): TileInstance[] {
+  return state.drawn ? [...state.hand, state.drawn] : state.hand
 }
 
 /** 理牌：主分類の順 → 用語ID の順に並べる */
@@ -54,26 +58,51 @@ function mulberry32(seed: number): () => number {
   }
 }
 
-/** 初期手牌：9種すべて＋よく使う4種を重複させた13枚（毎回同じ並びで確認しやすい） */
-export function createInitialHand(): TileInstance[] {
-  const ids = [...TERMS.map((t) => t.id), 'python', 'react', 'docker', 'git']
-  return sortHand(ids.slice(0, HAND_SIZE).map((termId) => ({ uid: nextUid(termId), termId })))
+/** 各用語4枚ずつの全牌（用語ID） */
+function fullSet(): string[] {
+  const ids: string[] = []
+  for (const t of TERMS) for (let i = 0; i < COPIES_PER_TERM; i++) ids.push(t.id)
+  return ids
 }
 
-/** 配り直し：各用語4枚ずつの山をシャッフルして13枚を引く */
-export function dealRandomHand(seed: number = Date.now()): TileInstance[] {
+function shuffle<T>(items: T[], seed: number): T[] {
   const rand = mulberry32(seed)
-  const wall: string[] = []
-  for (const t of TERMS) for (let i = 0; i < COPIES_PER_TERM; i++) wall.push(t.id)
-  for (let i = wall.length - 1; i > 0; i--) {
+  const out = [...items]
+  for (let i = out.length - 1; i > 0; i--) {
     const j = Math.floor(rand() * (i + 1))
-    ;[wall[i], wall[j]] = [wall[j], wall[i]]
+    ;[out[i], out[j]] = [out[j], out[i]]
   }
-  return sortHand(wall.slice(0, HAND_SIZE).map((termId) => ({ uid: nextUid(termId), termId })))
+  return out
+}
+
+/** uid は dealId と山の中の位置から決める（同じ配牌内で一意・配牌が変われば別の uid） */
+function toTiles(termIds: string[], dealId: number): TileInstance[] {
+  return termIds.map((termId, i) => ({ uid: `${termId}#${dealId}-${i}`, termId }))
+}
+
+interface Deal {
+  hand: TileInstance[]
+  wall: TileInstance[]
+}
+
+/** 初期配牌：9種すべて＋よく使う4種を重複させた13枚（毎回同じ並びで確認しやすい）。残りが牌山 */
+export function createInitialDeal(dealId: number): Deal {
+  const handIds = [...TERMS.map((t) => t.id), 'python', 'react', 'docker', 'git'].slice(0, HAND_SIZE)
+  const rest = fullSet()
+  for (const id of handIds) rest.splice(rest.indexOf(id), 1)
+  const tiles = toTiles([...handIds, ...shuffle(rest, INITIAL_WALL_SEED)], dealId)
+  return { hand: sortHand(tiles.slice(0, HAND_SIZE)), wall: tiles.slice(HAND_SIZE) }
+}
+
+/** 配り直し：全牌をシャッフルして先頭13枚を手牌、残りを牌山にする */
+export function dealRandom(seed: number, dealId: number): Deal {
+  const tiles = toTiles(shuffle(fullSet(), seed), dealId)
+  return { hand: sortHand(tiles.slice(0, HAND_SIZE)), wall: tiles.slice(HAND_SIZE) }
 }
 
 export function createInitialState(): GameState {
-  return { hand: createInitialHand(), selectedUid: null, discards: [], flying: null, dealId: 1 }
+  const dealId = 1
+  return { ...createInitialDeal(dealId), drawn: null, selectedUid: null, discards: [], flying: null, dealId }
 }
 
 export function gameReducer(state: GameState, action: GameAction): GameState {
@@ -82,29 +111,43 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
   switch (action.type) {
     case 'SELECT': {
-      if (!state.hand.some((t) => t.uid === action.uid)) return state
+      if (!handWithDrawn(state).some((t) => t.uid === action.uid)) return state
       // 同じ牌をもう一度押したら解除、別の牌なら切り替え（常に最大1枚）
       return { ...state, selectedUid: state.selectedUid === action.uid ? null : action.uid }
     }
     case 'SELECT_NEIGHBOR': {
-      if (state.hand.length === 0) return state
-      const idx = state.hand.findIndex((t) => t.uid === state.selectedUid)
+      const tiles = handWithDrawn(state)
+      if (tiles.length === 0) return state
+      const idx = tiles.findIndex((t) => t.uid === state.selectedUid)
       const next =
         idx === -1
           ? action.direction === 1
             ? 0
-            : state.hand.length - 1
-          : (idx + action.direction + state.hand.length) % state.hand.length
-      return { ...state, selectedUid: state.hand[next].uid }
+            : tiles.length - 1
+          : (idx + action.direction + tiles.length) % tiles.length
+      return { ...state, selectedUid: tiles[next].uid }
     }
     case 'DESELECT':
       return state.selectedUid === null ? state : { ...state, selectedUid: null }
+    case 'DRAW': {
+      if (state.drawn || state.wall.length === 0) return state
+      const [drawn, ...wall] = state.wall
+      return { ...state, drawn, wall }
+    }
     case 'DISCARD': {
-      const tile = state.hand.find((t) => t.uid === state.selectedUid)
+      // ツモ前（13枚）は打牌できない
+      if (!state.drawn) return state
+      const tile = handWithDrawn(state).find((t) => t.uid === state.selectedUid)
       if (!tile) return state
+      // ツモ切りなら手牌はそのまま。手出しならツモ牌を手牌に加えて理牌する
+      const hand =
+        tile.uid === state.drawn.uid
+          ? state.hand
+          : sortHand([...state.hand.filter((t) => t.uid !== tile.uid), state.drawn])
       return {
         ...state,
-        hand: state.hand.filter((t) => t.uid !== tile.uid),
+        hand,
+        drawn: null,
         selectedUid: null,
         flying: { ...tile, slotIndex: state.discards.length },
       }
@@ -113,13 +156,16 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (!state.flying) return state
       return { ...state, discards: [...state.discards, state.flying], flying: null }
     }
-    case 'REDEAL':
+    case 'REDEAL': {
+      const dealId = state.dealId + 1
       return {
-        hand: dealRandomHand(action.seed),
+        ...dealRandom(action.seed, dealId),
+        drawn: null,
         selectedUid: null,
         discards: [],
         flying: null,
-        dealId: state.dealId + 1,
+        dealId,
       }
+    }
   }
 }

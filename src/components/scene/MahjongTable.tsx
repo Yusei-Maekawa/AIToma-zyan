@@ -163,10 +163,10 @@ export const MahjongTable = memo(function MahjongTable() {
 
       {/* 台座 */}
       <mesh material={res.frameMat} position-y={(FLOOR_Y - TABLE.bodyHeight) / 2} raycast={noRaycast}>
-        <cylinderGeometry args={[2.0, 2.7, -FLOOR_Y - TABLE.bodyHeight, 48]} />
+        <cylinderGeometry args={[2.5, 3.3, -FLOOR_Y - TABLE.bodyHeight, 48]} />
       </mesh>
       <mesh material={res.stripMat} position-y={FLOOR_Y + 0.02} rotation-x={-Math.PI / 2} raycast={noRaycast}>
-        <ringGeometry args={[2.75, 2.82, 96]} />
+        <ringGeometry args={[3.36, 3.44, 96]} />
       </mesh>
 
       {/* 床：電脳空間のグリッド */}
@@ -179,7 +179,7 @@ export const MahjongTable = memo(function MahjongTable() {
         sectionSize={3}
         sectionThickness={1.1}
         sectionColor="#1d6fa3"
-        fadeDistance={38}
+        fadeDistance={46}
         fadeStrength={1.6}
         infiniteGrid
       />

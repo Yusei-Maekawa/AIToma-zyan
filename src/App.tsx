@@ -5,11 +5,11 @@ import { TermInfoPanel } from './components/ui/TermInfoPanel'
 import { TermTooltip } from './components/ui/TermTooltip'
 import { TitleBar } from './components/ui/TitleBar'
 import { SceneErrorBoundary, WebGLNotice } from './components/ui/SceneFallback'
-import { createInitialState, gameReducer } from './game/gameReducer'
+import { createInitialState, gameReducer, handWithDrawn } from './game/gameReducer'
 import { getTerm } from './data/terms'
 import { RotateNotice } from './components/ui/RotateNotice'
 import { detectWebGL2 } from './lib/webgl'
-import { playDiscard, playSelect, setSoundEnabled, unlockAudio } from './lib/sound'
+import { playDiscard, playDraw, playSelect, setSoundEnabled, unlockAudio } from './lib/sound'
 import { PORTRAIT_PHONE_QUERY, useMediaQuery } from './lib/useMediaQuery'
 import { canFullscreen, isFullscreen, toggleFullscreen } from './lib/fullscreen'
 
@@ -39,9 +39,10 @@ export default function App() {
     return () => document.removeEventListener('fullscreenchange', onChange)
   }, [])
 
-  const selectedTile = game.hand.find((t) => t.uid === game.selectedUid) ?? null
+  const selectedTile = handWithDrawn(game).find((t) => t.uid === game.selectedUid) ?? null
   const isDiscarding = game.flying !== null
-  const canDiscard = selectedTile !== null && !isDiscarding
+  const canDraw = game.drawn === null && game.wall.length > 0 && !isDiscarding
+  const canDiscard = game.drawn !== null && selectedTile !== null && !isDiscarding
 
   useEffect(() => setSoundEnabled(soundOn), [soundOn])
 
@@ -56,7 +57,14 @@ export default function App() {
     dispatch({ type: 'LAND' })
   }, [])
 
-  // 打牌の可否は reducer 側でも判定するので、ボタン連打・キー連打でも二重に捨てられない
+  // ツモ・打牌の可否は reducer 側でも判定するので、ボタン連打・キー連打でも二重に引いたり捨てたりできない。
+  // 効果音は reducer の結果を待たずに鳴らすため、UI と同じ条件（canDraw）のときだけ鳴らす
+  const handleDraw = useCallback(() => {
+    unlockAudio()
+    if (canDraw) playDraw()
+    dispatch({ type: 'DRAW' })
+  }, [canDraw])
+
   const handleDiscard = useCallback(() => {
     unlockAudio()
     dispatch({ type: 'DISCARD' })
@@ -64,7 +72,7 @@ export default function App() {
 
   const handleRedeal = useCallback(() => {
     setHoverTermId(null)
-    dispatch({ type: 'REDEAL' })
+    dispatch({ type: 'REDEAL', seed: Date.now() })
   }, [])
 
   const handleResetCamera = useCallback(() => setCameraResetToken((n) => n + 1), [])
@@ -98,6 +106,11 @@ export default function App() {
         case 'Escape':
           dispatch({ type: 'DESELECT' })
           break
+        case 't':
+        case 'T':
+          if (e.repeat) return
+          handleDraw()
+          break
         case 'r':
         case 'R':
           handleResetCamera()
@@ -106,7 +119,7 @@ export default function App() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [handleDiscard, handleResetCamera])
+  }, [handleDraw, handleDiscard, handleResetCamera])
 
   return (
     <div className="app">
@@ -115,6 +128,8 @@ export default function App() {
           <SceneErrorBoundary>
             <MahjongScene
               hand={game.hand}
+              drawn={game.drawn}
+              wallCount={game.wall.length}
               selectedUid={game.selectedUid}
               discards={game.discards}
               flying={game.flying}
@@ -135,13 +150,17 @@ export default function App() {
       <div className="hud">
         <TitleBar />
         <GameControls
+          canDraw={canDraw}
           canDiscard={canDiscard}
           isDiscarding={isDiscarding}
+          hasDrawn={game.drawn !== null}
           selectedName={selectedTile ? getTerm(selectedTile.termId).name : null}
-          handCount={game.hand.length}
+          handCount={handWithDrawn(game).length}
+          wallCount={game.wall.length}
           discardCount={game.discards.length + (game.flying ? 1 : 0)}
           showCategory={showCategory}
           soundOn={soundOn}
+          onDraw={handleDraw}
           onDiscard={handleDiscard}
           onRedeal={handleRedeal}
           onResetCamera={handleResetCamera}

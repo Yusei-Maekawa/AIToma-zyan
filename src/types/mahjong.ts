@@ -96,7 +96,12 @@ export interface FlyingTile extends TileInstance {
 
 /** ゲーム（PoC）状態 */
 export interface GameState {
+  /** 理牌済みの手牌（ツモ牌は含まない） */
   hand: TileInstance[]
+  /** ツモ牌（14枚目）。null 以外のときだけ打牌できる */
+  drawn: TileInstance | null
+  /** 牌山。配牌時にシャッフル・uid 付与済みで、先頭から引く */
+  wall: TileInstance[]
   selectedUid: string | null
   discards: DiscardedTile[]
   /** null 以外のとき打牌アニメーション中（操作ロック） */

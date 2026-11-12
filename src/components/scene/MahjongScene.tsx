@@ -11,6 +11,7 @@ import { HandTiles } from './HandTiles'
 import { DiscardPile } from './DiscardPile'
 import { FlyingTile } from './FlyingTile'
 import { OpponentHands } from './OpponentHands'
+import { WallTiles } from './WallTiles'
 import { CameraRig } from './CameraRig'
 import { DiscardImpact } from './effects/DiscardImpact'
 import { TileTransformRegistry } from './tileRegistry'
@@ -23,6 +24,8 @@ interface Impact {
 
 export interface MahjongSceneProps {
   hand: TileInstance[]
+  drawn: TileInstance | null
+  wallCount: number
   selectedUid: string | null
   discards: DiscardedTile[]
   flying: FlyingTileState | null
@@ -43,22 +46,22 @@ function Lighting() {
       <ambientLight intensity={0.18} />
       <hemisphereLight args={['#a5cdff', '#070b16', 0.5]} />
       <directionalLight
-        position={[4, 11, 7]}
+        position={[5, 13.5, 8.6]}
         intensity={2.3}
         color="#fff6ea"
         castShadow
         shadow-mapSize={[2048, 2048]}
-        shadow-camera-left={-7.5}
-        shadow-camera-right={7.5}
-        shadow-camera-top={7.5}
-        shadow-camera-bottom={-7.5}
+        shadow-camera-left={-9}
+        shadow-camera-right={9}
+        shadow-camera-top={9}
+        shadow-camera-bottom={-9}
         shadow-camera-near={1}
-        shadow-camera-far={30}
+        shadow-camera-far={36}
         shadow-bias={-0.0004}
         shadow-normalBias={0.02}
       />
-      <pointLight position={[-6.5, 3.2, -4]} color="#8b5cf6" intensity={28} distance={18} />
-      <pointLight position={[6.5, 2.6, 5]} color="#06b6d4" intensity={22} distance={16} />
+      <pointLight position={[-8, 3.6, -5]} color="#8b5cf6" intensity={36} distance={22} />
+      <pointLight position={[8, 3, 6.2]} color="#06b6d4" intensity={28} distance={20} />
       {/* 反射用の環境マップ。外部HDRを読まず、その場で光源パネルを焼き込む（ネットワーク不要・1回だけ描画） */}
       <Environment resolution={256} frames={1}>
         <Lightformer form="rect" intensity={1.6} color="#ffffff" position={[0, 8, 0]} rotation-x={Math.PI / 2} scale={[12, 12, 1]} />
@@ -78,6 +81,8 @@ function Lighting() {
  */
 export const MahjongScene = memo(function MahjongScene({
   hand,
+  drawn,
+  wallCount,
   selectedUid,
   discards,
   flying,
@@ -116,16 +121,19 @@ export const MahjongScene = memo(function MahjongScene({
       onCreated={({ gl }) => setMaxAnisotropy(gl.capabilities.getMaxAnisotropy())}
     >
       <color attach="background" args={['#04060c']} />
-      <fog attach="fog" args={['#04060c', 24, 52]} />
+      <fog attach="fog" args={['#04060c', 30, 64]} />
 
       <Lighting />
       <CameraRig resetToken={cameraResetToken} />
 
       <MahjongTable />
       <OpponentHands />
+      <WallTiles count={wallCount} />
 
       <HandTiles
         hand={hand}
+        drawn={drawn}
+        wallCount={wallCount}
         selectedUid={selectedUid}
         locked={flying !== null}
         showCategory={showCategory}
@@ -144,7 +152,7 @@ export const MahjongScene = memo(function MahjongScene({
       ))}
 
       {/* 卓上を漂うデータ粒子（控えめに） */}
-      <Sparkles count={60} scale={[11, 2.4, 11]} position={[0, 1.5, 0]} size={2.2} speed={0.25} opacity={0.5} color="#67e8f9" noise={0.6} />
+      <Sparkles count={60} scale={[13.5, 2.4, 13.5]} position={[0, 1.5, 0]} size={2.2} speed={0.25} opacity={0.5} color="#67e8f9" noise={0.6} />
     </Canvas>
   )
 })

@@ -2,13 +2,18 @@ import type { CSSProperties } from 'react'
 import { CATEGORY_LIST } from '../../data/categories'
 
 interface GameControlsProps {
+  canDraw: boolean
   canDiscard: boolean
   isDiscarding: boolean
+  /** ツモ済み（14枚）か */
+  hasDrawn: boolean
   selectedName: string | null
   handCount: number
+  wallCount: number
   discardCount: number
   showCategory: boolean
   soundOn: boolean
+  onDraw: () => void
   onDiscard: () => void
   onRedeal: () => void
   onResetCamera: () => void
@@ -55,16 +60,20 @@ function Switch({
 /**
  * 操作UI。
  *  - 右上: 表示設定（カテゴリ表示・効果音・カメラリセット）、カテゴリ凡例、操作方法
- *  - 右下: 打牌ボタン・配り直し・枚数表示
+ *  - 右下: ツモ・打牌ボタン・配り直し・枚数表示
  */
 export function GameControls({
+  canDraw,
   canDiscard,
   isDiscarding,
+  hasDrawn,
   selectedName,
   handCount,
+  wallCount,
   discardCount,
   showCategory,
   soundOn,
+  onDraw,
   onDiscard,
   onRedeal,
   onResetCamera,
@@ -103,10 +112,12 @@ export function GameControls({
         <details className="fold">
           <summary>操作方法</summary>
           <dl className="help">
+            <dt>ツモ</dt>
+            <dd>「ツモ」ボタン / T</dd>
             <dt>牌を選ぶ</dt>
             <dd>クリック / タップ（もう一度で解除）</dd>
             <dt>打牌</dt>
-            <dd>「打牌」ボタン / Enter・Space</dd>
+            <dd>ツモ後（14枚）に「打牌」ボタン / Enter・Space</dd>
             <dt>選択を移動</dt>
             <dd>← → キー</dd>
             <dt>選択解除</dt>
@@ -125,12 +136,26 @@ export function GameControls({
             手牌 <strong>{handCount}</strong>
           </span>
           <span>
-            捨て牌 <strong>{discardCount}</strong>
+            山 <strong>{wallCount}</strong>
+          </span>
+          <span>
+            河 <strong>{discardCount}</strong>
           </span>
         </div>
         <p className="action-bar__selected" aria-live="polite">
-          {isDiscarding ? '打牌中…' : selectedName ? `選択中: ${selectedName}` : '牌を選択してください'}
+          {isDiscarding
+            ? '打牌中…'
+            : !hasDrawn
+              ? wallCount > 0
+                ? 'ツモしてください'
+                : '牌山がありません'
+              : selectedName
+                ? `選択中: ${selectedName}`
+                : '捨てる牌を選択'}
         </p>
+        <button type="button" className="btn btn--draw" onClick={onDraw} disabled={!canDraw} title="牌山から1枚引く（T）">
+          ツモ
+        </button>
         <button
           type="button"
           className="btn btn--discard"

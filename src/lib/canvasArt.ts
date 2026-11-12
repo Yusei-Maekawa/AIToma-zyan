@@ -1,7 +1,7 @@
 import type { ITTerm } from '../types/mahjong'
 import { CATEGORIES } from '../data/categories'
 import { drawTileIcon } from './tileIcons'
-import { TABLE, DISCARD_COLS, DISCARD_START_Z, TILE, DISCARD_GAP_X, DISCARD_GAP_Z } from '../game/layout'
+import { TABLE, DISCARD_COLS, DISCARD_ROWS, DISCARD_START_Z, TILE, DISCARD_GAP_X, DISCARD_GAP_Z } from '../game/layout'
 
 /**
  * Canvas 2D による手続き的テクスチャ生成（three.js に依存しない純粋な描画関数）。
@@ -248,7 +248,7 @@ function generateCircuitTraces(seed: number) {
 /** 4家それぞれの河（捨て牌エリア）の枠を描く */
 function strokeDiscardZones(ctx: CanvasRenderingContext2D) {
   const w = DISCARD_COLS * (TILE.width + DISCARD_GAP_X) + 0.08
-  const h = 3 * (TILE.height + DISCARD_GAP_Z) + 0.08
+  const h = DISCARD_ROWS * (TILE.height + DISCARD_GAP_Z) + 0.08
   const z0 = DISCARD_START_Z - 0.04
   const S = FELT_CANVAS_SIZE
   for (let seat = 0; seat < 4; seat++) {

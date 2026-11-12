@@ -56,6 +56,36 @@ export function playSelect() {
   osc.stop(t + 0.1)
 }
 
+/** ツモの音：牌を引き寄せる短い擦れ音＋下降する電子音 */
+export function playDraw() {
+  const ac = ready()
+  if (!ac) return
+  const t = ac.currentTime
+
+  const noise = ac.createBufferSource()
+  noise.buffer = getNoise(ac)
+  const lp = ac.createBiquadFilter()
+  lp.type = 'lowpass'
+  lp.frequency.value = 1400
+  const ng = ac.createGain()
+  ng.gain.setValueAtTime(0.12, t)
+  ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.09)
+  noise.connect(lp).connect(ng).connect(ac.destination)
+  noise.start(t)
+
+  const osc = ac.createOscillator()
+  const gain = ac.createGain()
+  osc.type = 'triangle'
+  osc.frequency.setValueAtTime(1180, t)
+  osc.frequency.exponentialRampToValueAtTime(660, t + 0.12)
+  gain.gain.setValueAtTime(0.0001, t)
+  gain.gain.exponentialRampToValueAtTime(0.05, t + 0.01)
+  gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.16)
+  osc.connect(gain).connect(ac.destination)
+  osc.start(t)
+  osc.stop(t + 0.17)
+}
+
 /** 打牌の着地音：牌が卓に当たる「カチッ」＋デジタルな余韻 */
 export function playDiscard() {
   const ac = ready()
