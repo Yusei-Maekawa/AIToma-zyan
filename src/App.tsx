@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer, useState } from 'react'
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { MahjongScene } from './components/scene/MahjongScene'
 import { GameControls } from './components/ui/GameControls'
 import { TermInfoPanel } from './components/ui/TermInfoPanel'
@@ -6,6 +6,7 @@ import { TermTooltip } from './components/ui/TermTooltip'
 import { TitleBar } from './components/ui/TitleBar'
 import { SceneErrorBoundary, WebGLNotice } from './components/ui/SceneFallback'
 import { createInitialState, gameReducer, handWithDrawn } from './game/gameReducer'
+import { initialQuality, QUALITY_PRESETS, type QualityLevel } from './lib/quality'
 import { getTerm } from './data/terms'
 import { RotateNotice } from './components/ui/RotateNotice'
 import { detectWebGL2 } from './lib/webgl'
@@ -24,7 +25,7 @@ import { canFullscreen, isFullscreen, toggleFullscreen } from './lib/fullscreen'
 export default function App() {
   const [game, dispatch] = useReducer(gameReducer, undefined, createInitialState)
   const [showCategory, setShowCategory] = useState(true)
-  const [soundOn, setSoundOn] = useState(true)
+  const [soundOn, setSoundOn] = useState(false)
   const [hoverTermId, setHoverTermId] = useState<string | null>(null)
   const [cameraResetToken, setCameraResetToken] = useState(0)
   const webgl2 = useMemo(detectWebGL2, [])
@@ -32,6 +33,11 @@ export default function App() {
   const portraitPhone = useMediaQuery(PORTRAIT_PHONE_QUERY)
   const touchDevice = useMediaQuery('(pointer: coarse)')
   const [fullscreen, setFullscreen] = useState(false)
+  const [quality, setQuality] = useState(initialQuality)
+  // アンチエイリアスはコンテキスト生成時だけ有効。起動後に Canvas を作り直さない
+  const antialias = useRef(QUALITY_PRESETS[quality].antialias).current
+  const showDebug = useMemo(() => new URLSearchParams(window.location.search).has('debug'), [])
+  const debugRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const onChange = () => setFullscreen(isFullscreen())
@@ -43,6 +49,9 @@ export default function App() {
   const isDiscarding = game.flying !== null
   const canDraw = game.drawn === null && game.wall.length > 0 && !isDiscarding
   const canDiscard = game.drawn !== null && selectedTile !== null && !isDiscarding
+  // 再レンダー前の連打でも、鳴ったあとは同じツモで鳴らさない
+  const canDrawRef = useRef(canDraw)
+  canDrawRef.current = canDraw
 
   useEffect(() => setSoundEnabled(soundOn), [soundOn])
 
@@ -57,13 +66,15 @@ export default function App() {
     dispatch({ type: 'LAND' })
   }, [])
 
-  // ツモ・打牌の可否は reducer 側でも判定するので、ボタン連打・キー連打でも二重に引いたり捨てたりできない。
-  // 効果音は reducer の結果を待たずに鳴らすため、UI と同じ条件（canDraw）のときだけ鳴らす
+  // ツモの可否は reducer が最終判定する。効果音は再レンダーを待たず、鳴らし始めたらフラグを折る。
   const handleDraw = useCallback(() => {
     unlockAudio()
-    if (canDraw) playDraw()
+    if (canDrawRef.current) {
+      canDrawRef.current = false
+      playDraw()
+    }
     dispatch({ type: 'DRAW' })
-  }, [canDraw])
+  }, [])
 
   const handleDiscard = useCallback(() => {
     unlockAudio()
@@ -76,6 +87,7 @@ export default function App() {
   }, [])
 
   const handleResetCamera = useCallback(() => setCameraResetToken((n) => n + 1), [])
+  const handleQuality = useCallback((level: QualityLevel) => setQuality(level), [])
   const toggleCategory = useCallback(() => setShowCategory((v) => !v), [])
   const toggleSound = useCallback(() => setSoundOn((v) => !v), [])
 
@@ -137,6 +149,10 @@ export default function App() {
               showCategory={showCategory}
               cameraResetToken={cameraResetToken}
               paused={portraitPhone}
+              antialias={antialias}
+              quality={quality}
+              onLowerQuality={handleQuality}
+              debugRef={showDebug ? debugRef : null}
               onSelect={handleSelect}
               onHover={setHoverTermId}
               onLand={handleLand}
@@ -166,12 +182,15 @@ export default function App() {
           onResetCamera={handleResetCamera}
           onToggleCategory={toggleCategory}
           onToggleSound={toggleSound}
+          quality={quality}
+          onQuality={handleQuality}
           fullscreen={touchDevice && canFullscreen() ? { active: fullscreen, onToggle: toggleFullscreen } : null}
         />
         <TermInfoPanel selectedTermId={selectedTile?.termId ?? null} />
       </div>
 
       <TermTooltip termId={hoverTermId} />
+      {showDebug && <div ref={debugRef} className="debug-hud" aria-hidden="true" />}
       {portraitPhone && <RotateNotice />}
     </div>
   )

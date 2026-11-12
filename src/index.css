@@ -193,6 +193,24 @@ button {
   gap: 10px;
 }
 
+.quality {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.quality select {
+  flex: 1;
+  min-width: 0;
+  background: #0c1422;
+  color: var(--text);
+  border: 1px solid #2a3a55;
+  border-radius: 8px;
+  padding: 3px 6px;
+  font: inherit;
+  cursor: pointer;
+}
+
 .switch {
   display: flex;
   align-items: center;
@@ -336,6 +354,11 @@ button {
   padding: 6px 10px;
   font-size: 12px;
 }
+.btn--hint:not(:disabled) {
+  border-color: rgba(34, 211, 238, 0.85);
+  color: #ecfeff;
+  box-shadow: 0 0 14px rgba(34, 211, 238, 0.45);
+}
 
 .btn--draw {
   width: 100%;
@@ -466,6 +489,29 @@ button {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.action-bar__selected--wrap {
+  white-space: normal;
+  line-height: 1.35;
+}
+
+/* ?debug のときだけ App が出す。毎フレームの数値は DOM に直接書く */
+.debug-hud {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  pointer-events: none;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre;
+  color: var(--cyan-soft);
+  background: rgba(4, 8, 16, 0.78);
+  border: 1px solid rgba(34, 211, 238, 0.35);
+  border-radius: 8px;
+  padding: 6px 10px;
 }
 
 /* ---------------- 解説パネル（左下） ---------------- */
@@ -817,6 +863,11 @@ button {
   .settings .btn {
     padding: 4px 9px;
     font-size: 12px;
+  }
+  .debug-hud {
+    top: 50px;
+    font-size: 11px;
+    padding: 4px 8px;
   }
   .switch {
     gap: 6px;

@@ -6,7 +6,8 @@
  * 作成・再開する必要がある。unlock() をクリック時に呼んでおく。
  */
 let ctx: AudioContext | null = null
-let enabled = true
+/** 起動時は無音。スイッチを入れたときだけ App が true にする */
+let enabled = false
 
 export function setSoundEnabled(value: boolean) {
   enabled = value

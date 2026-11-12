@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react'
 import { CATEGORY_LIST } from '../../data/categories'
+import type { QualityLevel } from '../../lib/quality'
 
 interface GameControlsProps {
   canDraw: boolean
@@ -19,6 +20,8 @@ interface GameControlsProps {
   onResetCamera: () => void
   onToggleCategory: () => void
   onToggleSound: () => void
+  quality: QualityLevel
+  onQuality: (level: QualityLevel) => void
   /** 全画面ボタン（タッチ端末かつ対応ブラウザのみ。非表示なら null） */
   fullscreen: { active: boolean; onToggle: () => void } | null
 }
@@ -79,13 +82,28 @@ export function GameControls({
   onResetCamera,
   onToggleCategory,
   onToggleSound,
+  quality,
+  onQuality,
   fullscreen,
 }: GameControlsProps) {
+  const wallEmpty = wallCount === 0 && !hasDrawn && !isDiscarding
   return (
     <>
       <section className="panel settings" aria-label="表示設定">
         <Switch checked={showCategory} onChange={onToggleCategory} label="カテゴリ名を表示" shortLabel="カテゴリ名" />
         <Switch checked={soundOn} onChange={onToggleSound} label="効果音" shortLabel="効果音" />
+        <label className="quality">
+          <span className="quality__label">画質</span>
+          <select
+            aria-label="画質"
+            value={quality}
+            onChange={(e) => onQuality(e.target.value as QualityLevel)}
+          >
+            <option value="high">高</option>
+            <option value="medium">中</option>
+            <option value="low">低</option>
+          </select>
+        </label>
         <button type="button" className="btn btn--ghost" onClick={onResetCamera} title="カメラを初期位置に戻す（R）">
           <span aria-hidden="true">⟲</span> <Label long="カメラリセット" short="視点" />
         </button>
@@ -142,13 +160,13 @@ export function GameControls({
             河 <strong>{discardCount}</strong>
           </span>
         </div>
-        <p className="action-bar__selected" aria-live="polite">
+        <p className={`action-bar__selected${wallEmpty ? ' action-bar__selected--wrap' : ''}`} aria-live="polite">
           {isDiscarding
             ? '打牌中…'
             : !hasDrawn
               ? wallCount > 0
                 ? 'ツモしてください'
-                : '牌山がありません'
+                : '牌山がありません。配り直してください'
               : selectedName
                 ? `選択中: ${selectedName}`
                 : '捨てる牌を選択'}
@@ -165,7 +183,12 @@ export function GameControls({
         >
           打牌
         </button>
-        <button type="button" className="btn btn--ghost btn--small" onClick={onRedeal} disabled={isDiscarding}>
+        <button
+          type="button"
+          className={`btn btn--ghost btn--small${wallEmpty ? ' btn--hint' : ''}`}
+          onClick={onRedeal}
+          disabled={isDiscarding}
+        >
           配り直す
         </button>
       </section>
