@@ -4,6 +4,7 @@ import { GameControls } from './components/ui/GameControls'
 import { TermInfoPanel } from './components/ui/TermInfoPanel'
 import { TermTooltip } from './components/ui/TermTooltip'
 import { TitleBar } from './components/ui/TitleBar'
+import { WinPanel } from './components/ui/WinPanel'
 import { SceneErrorBoundary, WebGLNotice } from './components/ui/SceneFallback'
 import { createInitialState, gameReducer, handWithDrawn } from './game/gameReducer'
 import { initialQuality, QUALITY_PRESETS, type QualityLevel } from './lib/quality'
@@ -47,8 +48,9 @@ export default function App() {
 
   const selectedTile = handWithDrawn(game).find((t) => t.uid === game.selectedUid) ?? null
   const isDiscarding = game.flying !== null
-  const canDraw = game.drawn === null && game.wall.length > 0 && !isDiscarding
-  const canDiscard = game.drawn !== null && selectedTile !== null && !isDiscarding
+  const won = game.win !== null
+  const canDraw = !won && game.drawn === null && game.wall.length > 0 && !isDiscarding
+  const canDiscard = !won && game.drawn !== null && selectedTile !== null && !isDiscarding
   // 再レンダー前の連打でも、鳴ったあとは同じツモで鳴らさない
   const canDrawRef = useRef(canDraw)
   canDrawRef.current = canDraw
@@ -149,6 +151,7 @@ export default function App() {
               showCategory={showCategory}
               cameraResetToken={cameraResetToken}
               paused={portraitPhone}
+              won={won}
               antialias={antialias}
               quality={quality}
               onLowerQuality={handleQuality}
@@ -170,6 +173,7 @@ export default function App() {
           canDiscard={canDiscard}
           isDiscarding={isDiscarding}
           hasDrawn={game.drawn !== null}
+          hasWin={won}
           selectedName={selectedTile ? getTerm(selectedTile.termId).name : null}
           handCount={handWithDrawn(game).length}
           wallCount={game.wall.length}
@@ -188,6 +192,8 @@ export default function App() {
         />
         <TermInfoPanel selectedTermId={selectedTile?.termId ?? null} />
       </div>
+
+      {game.win && <WinPanel win={game.win} onAgain={handleRedeal} />}
 
       <TermTooltip termId={hoverTermId} />
       {showDebug && <div ref={debugRef} className="debug-hud" aria-hidden="true" />}

@@ -8,6 +8,7 @@ interface GameControlsProps {
   isDiscarding: boolean
   /** ツモ済み（14枚）か */
   hasDrawn: boolean
+  hasWin: boolean
   selectedName: string | null
   handCount: number
   wallCount: number
@@ -70,6 +71,7 @@ export function GameControls({
   canDiscard,
   isDiscarding,
   hasDrawn,
+  hasWin,
   selectedName,
   handCount,
   wallCount,
@@ -163,6 +165,8 @@ export function GameControls({
         <p className={`action-bar__selected${wallEmpty ? ' action-bar__selected--wrap' : ''}`} aria-live="polite">
           {isDiscarding
             ? '打牌中…'
+            : hasWin
+              ? 'アガリ'
             : !hasDrawn
               ? wallCount > 0
                 ? 'ツモしてください'

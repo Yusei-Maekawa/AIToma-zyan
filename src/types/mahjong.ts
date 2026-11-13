@@ -5,6 +5,7 @@
  * 用語は将来 200語 → 約1,000語 に増える前提のため、
  * 「用語（Term）」と「卓上の牌（TileInstance）」を別物として扱う。
  */
+import type { WinDecomposition } from '../engine/win'
 
 /** 技術カテゴリID（9分類） */
 export type CategoryId =
@@ -108,6 +109,8 @@ export interface GameState {
   flying: FlyingTile | null
   /** 配牌のたびに増える。牌の登場アニメーションのキーに使用 */
   dealId: number
+  /** ツモ和了の分解。null 以外のとき対局終了 */
+  win: WinDecomposition | null
 }
 
 export type Vec3 = [number, number, number]

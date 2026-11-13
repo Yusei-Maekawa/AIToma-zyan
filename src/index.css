@@ -514,6 +514,47 @@ button {
   padding: 6px 10px;
 }
 
+.win-panel {
+  position: absolute;
+  top: 84px;
+  left: 50%;
+  z-index: 4;
+  transform: translateX(-50%);
+  width: min(340px, calc(100vw - 32px));
+  max-height: min(52vh, 480px);
+  overflow: auto;
+  padding: 14px 16px 16px;
+}
+.win-panel__title {
+  margin: 0 0 8px;
+  font-size: 18px;
+  letter-spacing: 0.18em;
+  color: var(--cyan-soft);
+}
+.win-panel__pair {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+.win-panel__melds {
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.win-panel__name {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+}
+.win-panel__reason {
+  display: block;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-dim);
+}
+
 /* ---------------- 解説パネル（左下） ---------------- */
 
 .term-panel {
@@ -868,6 +909,12 @@ button {
     top: 50px;
     font-size: 11px;
     padding: 4px 8px;
+  }
+  .win-panel {
+    top: 50px;
+    width: min(250px, 36vw);
+    max-height: calc(56% - 50px);
+    padding: 8px 10px;
   }
   .switch {
     gap: 6px;

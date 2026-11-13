@@ -1,12 +1,15 @@
 import type { GameState, TileInstance } from '../types/mahjong'
 import { TERMS, getTerm } from '../data/terms'
 import { CATEGORY_ORDER } from '../data/categories'
+import { RELATIONS } from '../data/relations'
+import { findWin } from '../engine/win'
 
 /**
  * PoC用のゲーム状態管理（useReducer）。
  *
  * 状態遷移（手牌の枚数）:
  *   13枚 ──DRAW──▶ 14枚 ──DISCARD──▶ flying ──LAND──▶ 13枚
+ *   14枚がアガリ形なら DRAW の時点で win をセットし、REDEAL 以外を拒否する。
  *
  * 選択（SELECT / SELECT_NEIGHBOR / DESELECT）は13枚・14枚どちらでも可能（解説を見るため）。
  * DISCARD はツモ牌があるとき（14枚）だけ、DRAW はツモ牌がなく牌山が残っているときだけ受け付ける。
@@ -102,11 +105,12 @@ export function dealRandom(seed: number, dealId: number): Deal {
 
 export function createInitialState(): GameState {
   const dealId = 1
-  return { ...createInitialDeal(dealId), drawn: null, selectedUid: null, discards: [], flying: null, dealId }
+  return { ...createInitialDeal(dealId), drawn: null, selectedUid: null, discards: [], flying: null, dealId, win: null }
 }
 
 export function gameReducer(state: GameState, action: GameAction): GameState {
-  // 打牌アニメーション中は LAND 以外の操作を受け付けない
+  // アガリ後は配り直しだけ。打牌中は着地だけ。
+  if (state.win && action.type !== 'REDEAL') return state
   if (state.flying && action.type !== 'LAND') return state
 
   switch (action.type) {
@@ -132,7 +136,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'DRAW': {
       if (state.drawn || state.wall.length === 0) return state
       const [drawn, ...wall] = state.wall
-      return { ...state, drawn, wall }
+      const win = findWin([...state.hand, drawn].map((t) => t.termId), RELATIONS)
+      return { ...state, drawn, wall, win }
     }
     case 'DISCARD': {
       // ツモ前（13枚）は打牌できない
@@ -165,6 +170,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         discards: [],
         flying: null,
         dealId,
+        win: null,
       }
     }
   }

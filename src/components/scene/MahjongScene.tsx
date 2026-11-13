@@ -44,6 +44,8 @@ export interface MahjongSceneProps {
   cameraResetToken: number
   /** true の間は描画ループを止める（スマホ縦向きで回転案内を出している間など） */
   paused: boolean
+  /** アガリ後は牌を選べない */
+  won: boolean
   /** 起動時に決めたアンチエイリアス。切替では変えない（コンテキスト再生成を避ける） */
   antialias: boolean
   quality: QualityLevel
@@ -186,6 +188,7 @@ export const MahjongScene = memo(function MahjongScene({
   showCategory,
   cameraResetToken,
   paused,
+  won,
   antialias,
   quality,
   onLowerQuality,
@@ -243,7 +246,7 @@ export const MahjongScene = memo(function MahjongScene({
         drawn={drawn}
         wallCount={wallCount}
         selectedUid={selectedUid}
-        locked={flying !== null}
+        locked={flying !== null || won}
         showCategory={showCategory}
         dealId={dealId}
         registry={registry}
